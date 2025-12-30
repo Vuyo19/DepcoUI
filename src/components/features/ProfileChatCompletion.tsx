@@ -32,6 +32,7 @@ export function ProfileChatCompletion({
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { data: userProfile } = useUserProfile()
+  void userProfile // Reserved for future personalization
   const profileCompletion = useProfileCompletionChat()
 
   useEffect(() => {

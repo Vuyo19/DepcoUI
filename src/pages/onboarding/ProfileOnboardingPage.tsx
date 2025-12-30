@@ -9,8 +9,8 @@ export function ProfileOnboardingPage() {
   const { data: userProfile, isLoading } = useUserProfile()
   const updateProfile = useUpdateProfile()
 
-  // Get redirect path from state, default to /apply
-  const redirectTo = (location.state as { from?: string })?.from || '/apply'
+  // Get redirect path from state, default to /dashboard
+  const redirectTo = (location.state as { from?: string })?.from || '/dashboard'
 
   const handleComplete = async (data: ProfileFormData) => {
     await updateProfile.mutateAsync({

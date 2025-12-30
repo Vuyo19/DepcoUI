@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { ExpenseProfileForm } from '@/components/features'
-import { useSaveExpenseProfile } from '@/hooks'
+import { useUpdateExpenses, useUpdateProfile } from '@/hooks'
 
 export function ExpenseProfilePage() {
   const navigate = useNavigate()
-  const { mutate: saveExpenseProfile } = useSaveExpenseProfile()
+  const { mutateAsync: updateExpenses } = useUpdateExpenses()
+  const { mutateAsync: updateProfile } = useUpdateProfile()
 
-  const handleComplete = (data: {
+  const handleComplete = async (data: {
     monthlyIncome: number
     rentAmount: number
     transportCost: number
@@ -14,11 +15,19 @@ export function ExpenseProfilePage() {
     utilitiesCost: number
     otherExpenses: number
   }) => {
-    saveExpenseProfile(data, {
-      onSuccess: () => {
-        navigate('/dashboard')
-      },
+    // Save monthly income to profile
+    await updateProfile({ monthly_income: data.monthlyIncome })
+
+    // Save expenses with correct field names for backend
+    await updateExpenses({
+      expense_rent: data.rentAmount,
+      expense_transport: data.transportCost,
+      expense_groceries: data.foodExpenses,
+      expense_utilities: data.utilitiesCost,
+      expense_other: data.otherExpenses,
     })
+
+    navigate('/dashboard')
   }
 
   const handleSkip = () => {

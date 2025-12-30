@@ -21,14 +21,14 @@ export const userService = {
     data: Omit<ExpenseProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>,
     token: string
   ): Promise<ApiResponse<ExpenseProfile>> {
-    return api.post('/users/me/expenses', data as Record<string, unknown>, token)
+    return api.put('/users/me/expenses', data as Record<string, unknown>, token)
   },
 
   async updateExpenseProfile(
     data: Partial<ExpenseProfile>,
     token: string
   ): Promise<ApiResponse<ExpenseProfile>> {
-    return api.patch('/users/me/expenses', data as Record<string, unknown>, token)
+    return api.put('/users/me/expenses', data as Record<string, unknown>, token)
   },
 
   async deleteAccount(token: string): Promise<ApiResponse<{ message: string }>> {

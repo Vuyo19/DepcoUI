@@ -1,22 +1,24 @@
 import { Link } from 'react-router-dom'
 import { Plus, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react'
-import { Button, Card, CardContent } from '@/components/ui'
+import { Button, Card, CardContent, Spinner } from '@/components/ui'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { useApiLoans, type ApiLoan } from '@/hooks'
 
-const loans = [
-  {
-    id: '1',
-    amount: 10000,
-    term: 12,
-    interestRate: 11,
-    monthlyPayment: 925,
-    status: 'active',
-    purpose: 'Rental Deposit',
-    createdAt: '2024-10-01',
-    paidMonths: 3,
-  },
-]
+// Transform API loan to display format
+function transformApiLoan(loan: ApiLoan) {
+  return {
+    id: String(loan.id),
+    amount: loan.amount_approved || loan.amount_requested,
+    term: loan.term_months,
+    interestRate: loan.interest_rate || 11,
+    monthlyPayment: loan.monthly_payment || 0,
+    status: loan.status,
+    purpose: loan.purpose?.replace('_', ' ') || 'Rental Deposit',
+    createdAt: loan.created_at,
+    paidMonths: loan.paid_months ?? 0,
+  }
+}
 
 const statusConfig = {
   pending: {
@@ -52,6 +54,19 @@ const statusConfig = {
 }
 
 export function LoansPage() {
+  const { data: apiLoans, isLoading } = useApiLoans()
+
+  // Transform API loans to display format
+  const loans = apiLoans ? apiLoans.map(transformApiLoan) : []
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
+        <Spinner className="h-8 w-8" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

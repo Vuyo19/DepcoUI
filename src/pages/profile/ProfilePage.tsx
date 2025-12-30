@@ -68,14 +68,16 @@ export function ProfilePage() {
 
   // Load profile data when available
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile || user) {
       profileForm.reset({
-        firstName: userProfile.first_name || user?.firstName || '',
-        lastName: userProfile.last_name || user?.lastName || '',
-        email: userProfile.email || user?.primaryEmailAddress?.emailAddress || '',
-        phoneNumber: userProfile.phone_number || '',
-        idNumber: userProfile.id_number || '',
+        firstName: user?.firstName || '',
+        lastName: user?.lastName || '',
+        email: user?.primaryEmailAddress?.emailAddress || '',
+        phoneNumber: userProfile?.phone_number || '',
+        idNumber: userProfile?.id_number || '',
       })
+    }
+    if (userProfile) {
       expenseForm.reset({
         monthlyIncome: userProfile.monthly_income || 0,
         rentAmount: userProfile.expense_rent || 0,
@@ -90,8 +92,6 @@ export function ProfilePage() {
   const onProfileSubmit = async (data: ProfileFormData) => {
     try {
       await updateProfile.mutateAsync({
-        first_name: data.firstName,
-        last_name: data.lastName,
         phone_number: data.phoneNumber,
         id_number: data.idNumber,
       })

@@ -43,6 +43,37 @@ export {
   useDocumentStatus,
   useUploadDocument,
   useDeleteDocument,
+  // Credit Score hooks
+  useCreditScore,
+  useCreditScoreHistory,
+  useSimulatorAccess,
+  useSimulateScenario,
+  useAISimulation,
+  useSubscribeToSimulator,
+  useCreditTips,
+  // Education hooks
+  useEducationContent,
+  useEducationContentDetail,
+  useEducationCategories,
+  useRecommendedContent,
+  // External Credit & Multi-Scenario Simulation hooks
+  useExternalAccounts,
+  useAddExternalAccount,
+  useUpdateExternalAccount,
+  useDeleteExternalAccount,
+  useCreditPortfolio,
+  useMultiScenarioSimulation,
+  useCreditScenarios,
+  useSaveScenario,
+  useUpdateScenario,
+  useDeleteScenario,
+  useSeedScenarios,
+  useCompareScenarios,
+  // Imported Credit Score hooks
+  useImportedScore,
+  useImportScore,
+  useDeleteImportedScore,
+  useSimulateScoreImpact,
 } from './useApi'
 
 export type {
@@ -59,4 +90,29 @@ export type {
   ProfileCompletionMessage,
   DocumentInfo,
   DocumentStatus,
+  // Credit types
+  CreditScoreResponse,
+  CreditScoreHistoryItem,
+  SimulatorAccess,
+  SimulationResult,
+  AISimulationResponse,
+  CreditTip,
+  CreditTipsResponse,
+  // Education types
+  EducationContent,
+  EducationContentDetail,
+  EducationCategory,
+  // External Credit & Multi-Scenario types
+  ExternalCreditAccount,
+  CreditItem,
+  CreditScenario,
+  CreditPortfolio,
+  MultiScenarioSimulationResult,
+  ScenarioComparison,
+  // Imported Credit Score types
+  ImportedCreditScore,
+  ImportScoreInput,
+  ScoreImpactFactor,
+  ProjectedScoreImpact,
+  ScoreImpactSimulation,
 } from './useApi'

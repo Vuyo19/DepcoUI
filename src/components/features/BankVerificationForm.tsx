@@ -40,7 +40,7 @@ const bankSchema = z.object({
 export type BankFormData = z.infer<typeof bankSchema>
 
 interface BankVerificationFormProps {
-  onComplete: (data: BankFormData) => void
+  onComplete: (data: BankFormData) => Promise<void> | void
   onSkip?: () => void
 }
 

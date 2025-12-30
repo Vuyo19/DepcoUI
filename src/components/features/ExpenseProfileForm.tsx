@@ -31,7 +31,7 @@ const expenseSchema = z.object({
 type ExpenseFormData = z.infer<typeof expenseSchema>
 
 interface ExpenseProfileFormProps {
-  onComplete: (data: ExpenseFormData) => void
+  onComplete: (data: ExpenseFormData) => Promise<void> | void
   onSkip?: () => void
 }
 
@@ -150,9 +150,8 @@ export function ExpenseProfileForm({
   const onSubmit = async (data: ExpenseFormData) => {
     setIsSubmitting(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await onComplete(data)
       toast.success('Expense profile saved!')
-      onComplete(data)
     } catch {
       toast.error('Failed to save expense profile')
     } finally {

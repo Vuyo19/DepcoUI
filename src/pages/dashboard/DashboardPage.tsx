@@ -1,29 +1,31 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 import {
   Wallet,
   TrendingUp,
   Calendar,
-  ArrowRight,
   Plus,
   FileText,
   Bot,
   CheckCircle2,
   Sparkles,
   PartyPopper,
+  GraduationCap,
+  Activity,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button, Card, CardHeader, CardTitle, CardContent, Spinner } from '@/components/ui'
 import { formatCurrency } from '@/lib/utils'
-import { useUserProfile, useLoans, useKYCStatus } from '@/hooks'
+import { useUserProfile, useApiLoans, useKYCStatus, useCreditScore, type ApiLoan } from '@/hooks'
 
 export function DashboardPage() {
   const { user } = useUser()
   const navigate = useNavigate()
   const { data: profile, isLoading: isLoadingProfile } = useUserProfile()
-  const { data: loans, isLoading: isLoadingLoans } = useLoans()
+  const { data: loans } = useApiLoans()
   const { data: kycStatus } = useKYCStatus()
+  const { data: creditScore, isLoading: isLoadingCreditScore } = useCreditScore()
 
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationMessage, setCelebrationMessage] = useState('')
@@ -33,15 +35,17 @@ export function DashboardPage() {
     navigate('/onboarding/profile', { state: { from: '/dashboard' } })
   }
 
-  // Handle celebration triggers
+  // Handle celebration triggers (can be called by child components)
   const triggerCelebration = (message: string) => {
     setCelebrationMessage(message)
     setShowCelebration(true)
     setTimeout(() => setShowCelebration(false), 4000)
   }
+  // Keep for future use
+  void triggerCelebration
 
   // Get the most recent active loan
-  const activeLoan = loans?.find((loan) =>
+  const activeLoan = loans?.find((loan: ApiLoan) =>
     ['active', 'approved', 'pending'].includes(loan.status)
   )
 
@@ -99,9 +103,9 @@ export function DashboardPage() {
         },
         {
           label: 'Status',
-          value: kycStatus?.is_complete ? 'Ready to apply' : 'Setup needed',
+          value: kycStatus?.kyc_completed ? 'Ready to apply' : 'Setup needed',
           icon: TrendingUp,
-          color: kycStatus?.is_complete ? 'bg-accent-100 text-accent-600' : 'bg-neutral-100 text-neutral-600',
+          color: kycStatus?.kyc_completed ? 'bg-accent-100 text-accent-600' : 'bg-neutral-100 text-neutral-600',
         },
       ]
 
@@ -141,14 +145,14 @@ export function DashboardPage() {
           <p className="mt-1 text-neutral-600">
             {activeLoan
               ? "Here's your loan overview"
-              : kycStatus?.is_complete
+              : kycStatus?.kyc_completed
               ? "You're all set to apply for your rental deposit loan"
               : "Let's get you set up for your rental deposit loan"}
           </p>
         </div>
 
-        {/* Profile Completion Banner - if not complete */}
-        {!kycStatus?.is_complete && profileCompletion < 100 && (
+        {/* Profile Completion Banner - if not complete and no active loan */}
+        {!activeLoan && !kycStatus?.kyc_completed && profileCompletion < 100 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -180,7 +184,7 @@ export function DashboardPage() {
               </div>
               <Button
                 onClick={goToProfileOnboarding}
-                className="bg-white text-primary-600 hover:bg-primary-50"
+                className="!bg-white !text-primary-600 hover:!bg-primary-50"
               >
                 Continue Setup
               </Button>
@@ -248,6 +252,24 @@ export function DashboardPage() {
                     </div>
                   </div>
 
+                  {/* Payment Progress */}
+                  {activeLoan.status === 'active' && activeLoan.term_months > 0 && (
+                    <div className="mt-6 pt-4 border-t border-neutral-100">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-neutral-500">Progress</span>
+                        <span className="font-medium text-neutral-900">
+                          {activeLoan.paid_months ?? 0}/{activeLoan.term_months} payments
+                        </span>
+                      </div>
+                      <div className="h-3 overflow-hidden rounded-full bg-neutral-200">
+                        <div
+                          className="h-full rounded-full bg-primary-500 transition-all"
+                          style={{ width: `${((activeLoan.paid_months ?? 0) / activeLoan.term_months) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-6 flex gap-4">
                     <Link to="/loans">
                       <Button variant="outline" size="sm">
@@ -271,7 +293,7 @@ export function DashboardPage() {
                     {[
                       {
                         title: 'Complete your profile',
-                        done: profileCompletion >= 60,
+                        done: profile?.profile_completed || (profile?.phone_number && profile?.id_number),
                         link: '/onboarding/profile',
                       },
                       {
@@ -288,7 +310,11 @@ export function DashboardPage() {
                         title: 'Apply for your loan',
                         done: false,
                         link: '/apply',
-                        disabled: !kycStatus?.is_complete,
+                        disabled: !(
+                          (profile?.profile_completed || (profile?.phone_number && profile?.id_number)) &&
+                          profile?.expenses_completed &&
+                          profile?.bank_verified
+                        ),
                       },
                     ].map((step, i) => (
                       <div
@@ -318,25 +344,15 @@ export function DashboardPage() {
                           </span>
                         </div>
                         {!step.done && (
-                          step.action ? (
+                          <Link to={step.link || '#'}>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={step.action}
+                              disabled={step.disabled}
                             >
-                              Start
+                              {step.disabled ? 'Complete above first' : 'Start'}
                             </Button>
-                          ) : (
-                            <Link to={step.link || '#'}>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={step.disabled}
-                              >
-                                {step.disabled ? 'Complete above first' : 'Start'}
-                              </Button>
-                            </Link>
-                          )
+                          </Link>
                         )}
                       </div>
                     ))}
@@ -381,6 +397,99 @@ export function DashboardPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Credit Score Card */}
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-neutral-100 bg-gradient-to-r from-primary-50 to-secondary-50">
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary-600" />
+                  Credit Score
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {isLoadingCreditScore ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Spinner className="h-6 w-6" />
+                  </div>
+                ) : creditScore ? (
+                  <div className="text-center">
+                    {/* Score Circle */}
+                    <div className="relative mx-auto h-32 w-32">
+                      <svg className="h-32 w-32 -rotate-90 transform">
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="56"
+                          stroke="currentColor"
+                          strokeWidth="12"
+                          fill="transparent"
+                          className="text-neutral-100"
+                        />
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="56"
+                          stroke="currentColor"
+                          strokeWidth="12"
+                          fill="transparent"
+                          strokeDasharray={`${(creditScore.score / 100) * 351.86} 351.86`}
+                          className={
+                            creditScore.rating_color === 'green'
+                              ? 'text-green-500'
+                              : creditScore.rating_color === 'blue'
+                              ? 'text-blue-500'
+                              : creditScore.rating_color === 'yellow'
+                              ? 'text-yellow-500'
+                              : creditScore.rating_color === 'orange'
+                              ? 'text-orange-500'
+                              : 'text-red-500'
+                          }
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-bold text-neutral-900">
+                          {creditScore.score}
+                        </span>
+                        <span className="text-xs text-neutral-500">out of 100</span>
+                      </div>
+                    </div>
+                    <p
+                      className={`mt-3 text-sm font-medium ${
+                        creditScore.rating_color === 'green'
+                          ? 'text-green-600'
+                          : creditScore.rating_color === 'blue'
+                          ? 'text-blue-600'
+                          : creditScore.rating_color === 'yellow'
+                          ? 'text-yellow-600'
+                          : creditScore.rating_color === 'orange'
+                          ? 'text-orange-600'
+                          : 'text-red-600'
+                      }`}
+                    >
+                      {creditScore.rating}
+                    </p>
+                    <Link to="/simulator" className="mt-4 block">
+                      <Button size="sm" className="w-full gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Credit Simulator
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-neutral-500 mb-3">
+                      Complete your profile to see your credit score
+                    </p>
+                    <Link to="/onboarding/profile">
+                      <Button size="sm" variant="outline">
+                        Complete Profile
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Quick Actions */}
             <Card>
               <CardHeader>
@@ -391,7 +500,7 @@ export function DashboardPage() {
                   <Button
                     variant="outline"
                     className="w-full justify-start gap-3"
-                    disabled={!kycStatus?.is_complete}
+                    disabled={!kycStatus?.kyc_completed}
                   >
                     <Plus className="h-4 w-4" />
                     Apply for Loan
@@ -405,6 +514,18 @@ export function DashboardPage() {
                     </Button>
                   </Link>
                 )}
+                <Link to="/simulator" className="block">
+                  <Button variant="outline" className="w-full justify-start gap-3">
+                    <Activity className="h-4 w-4" />
+                    Credit Simulator
+                  </Button>
+                </Link>
+                <Link to="/learn" className="block">
+                  <Button variant="outline" className="w-full justify-start gap-3">
+                    <GraduationCap className="h-4 w-4" />
+                    Financial Education
+                  </Button>
+                </Link>
                 <Button variant="outline" className="w-full justify-start gap-3">
                   <Bot className="h-4 w-4" />
                   Ask Depi
@@ -422,7 +543,7 @@ export function DashboardPage() {
                   <div>
                     <h3 className="font-semibold text-primary-900">Tip from Depi</h3>
                     <p className="mt-1 text-sm text-primary-700">
-                      {!kycStatus?.is_complete
+                      {!kycStatus?.kyc_completed
                         ? "Complete your profile to see how much you can borrow. It only takes a minute!"
                         : profile?.monthly_income && !profile?.expenses_completed
                         ? "Adding your expenses helps me give you more accurate loan recommendations."

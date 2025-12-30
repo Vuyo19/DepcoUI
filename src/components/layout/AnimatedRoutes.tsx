@@ -15,6 +15,8 @@ import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { BankVerifyPage } from '@/pages/apply/BankVerifyPage'
 import { ExpenseProfilePage } from '@/pages/onboarding/ExpenseProfilePage'
 import { ProfileOnboardingPage } from '@/pages/onboarding/ProfileOnboardingPage'
+import { CreditSimulatorPage } from '@/pages/simulator/CreditSimulatorPage'
+import { LearnPage } from '@/pages/learn/LearnPage'
 
 // Public Pages
 import { AboutPage } from '@/pages/public/AboutPage'
@@ -214,6 +216,30 @@ export function AnimatedRoutes() {
               <Layout>
                 <PageTransition>
                   <ProfilePage />
+                </PageTransition>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/simulator"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <PageTransition>
+                  <CreditSimulatorPage />
+                </PageTransition>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learn"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <PageTransition>
+                  <LearnPage />
                 </PageTransition>
               </Layout>
             </ProtectedRoute>

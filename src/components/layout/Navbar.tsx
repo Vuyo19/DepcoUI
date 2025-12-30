@@ -11,6 +11,8 @@ import {
   Phone,
   HelpCircle,
   ChevronDown,
+  Activity,
+  GraduationCap,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui'
@@ -28,6 +30,8 @@ const authLinks = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/dashboard', label: 'Dashboard', icon: FileText },
   { href: '/loans', label: 'My Loans', icon: CreditCard },
+  { href: '/simulator', label: 'Credit Simulator', icon: Activity },
+  { href: '/learn', label: 'Learn', icon: GraduationCap },
 ]
 
 export function Navbar() {

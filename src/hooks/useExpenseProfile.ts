@@ -30,6 +30,8 @@ export function useSaveExpenseProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expense-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['kyc-status'] })
     },
   })
 }
@@ -46,6 +48,8 @@ export function useUpdateExpenseProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expense-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['kyc-status'] })
     },
   })
 }

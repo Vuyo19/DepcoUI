@@ -1,24 +1,23 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { BankVerificationForm, type BankFormData } from '@/components/features/BankVerificationForm'
-import { useInitiateBankVerification } from '@/hooks'
+import { useUpdateProfile } from '@/hooks'
 
 export function BankVerifyPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { mutate: initiateBankVerification } = useInitiateBankVerification()
+  const { mutateAsync: updateProfile } = useUpdateProfile()
 
-  // Get redirect path from state, default to /apply
-  const redirectTo = (location.state as { from?: string })?.from || '/apply'
+  // Get redirect path from state, default to /dashboard
+  const redirectTo = (location.state as { from?: string })?.from || '/dashboard'
 
-  const handleComplete = (data: BankFormData) => {
-    initiateBankVerification({
-      bankName: data.bank_name,
-      accountType: data.account_type,
-    }, {
-      onSuccess: () => {
-        navigate(redirectTo)
-      },
+  const handleComplete = async (data: BankFormData) => {
+    // Save bank details and mark as verified
+    await updateProfile({
+      bank_name: data.bank_name,
+      bank_account_type: data.account_type,
+      bank_verified: true,
     })
+    navigate(redirectTo)
   }
 
   const handleSkip = () => {

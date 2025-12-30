@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Upload,
   FileText,
@@ -8,11 +8,10 @@ import {
   Check,
   AlertCircle,
   Loader2,
-  Eye,
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
-import { useUploadDocument, useDeleteDocument, type DocumentInfo } from '@/hooks'
+import { useUploadDocument, useDeleteDocument, useDocumentStatus, type DocumentInfo } from '@/hooks'
 import { toast } from 'sonner'
 
 interface DocumentUploadProps {

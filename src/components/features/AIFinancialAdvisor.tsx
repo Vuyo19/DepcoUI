@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Bot, User, Sparkles, Loader2, X, Minimize2, RefreshCw } from 'lucide-react'
+import { Send, Bot, User, Sparkles, Loader2, X, Minimize2 } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'

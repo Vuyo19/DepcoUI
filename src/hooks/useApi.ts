@@ -56,6 +56,8 @@ export interface Loan {
   applied_at: string
   approved_at?: string
   disbursed_at?: string
+  created_at: string
+  paid_months?: number
 }
 
 export interface ChatResponse {
@@ -109,6 +111,7 @@ export function useUpdateProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['kyc-status'] })
     },
   })
 }
@@ -556,6 +559,710 @@ export function useDeleteDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document-status'] })
+    },
+  })
+}
+
+// Credit Score Types
+export interface CreditScoreResponse {
+  score: number
+  rating: string
+  rating_color: string
+  breakdown: {
+    payment_history: number
+    credit_utilization: number
+    account_age: number
+    income_stability: number
+  }
+  factors: {
+    payment_history: { score: number; max: number; weight: string; description: string }
+    credit_utilization: { score: number; max: number; weight: string; description: string }
+    account_age: { score: number; max: number; weight: string; description: string }
+    income_stability: { score: number; max: number; weight: string; description: string }
+  }
+  last_updated?: string
+}
+
+export interface CreditScoreHistoryItem {
+  score: number
+  previous_score: number | null
+  change: number
+  reason: string | null
+  date: string
+}
+
+export interface SimulatorAccess {
+  has_access: boolean
+  access_type: 'loan_holder' | 'subscription' | 'none'
+  message?: string
+  subscription?: {
+    plan: string
+    next_billing: string | null
+  }
+  subscription_required?: boolean
+  pricing?: {
+    monthly: number
+    annual: number
+    currency: string
+  }
+  has_loan_history?: boolean
+}
+
+export interface SimulationResult {
+  scenario: string
+  current_score: number
+  projected_score: number
+  change: number
+  new_rating: string
+  message: string
+  recovery_time: string
+}
+
+export interface AISimulationResponse {
+  question: string
+  analysis: string
+  current_score: number
+  projected_impact?: {
+    best_case: number
+    worst_case: number
+    likely: number
+  }
+  recommendations: string[]
+  factors_affected: string[]
+}
+
+export interface CreditTip {
+  category: string
+  priority: 'high' | 'medium' | 'low'
+  tip: string
+  potential_impact: string
+}
+
+export interface CreditTipsResponse {
+  current_score: number
+  rating: string
+  tips: CreditTip[]
+  factors: CreditScoreResponse['factors']
+}
+
+// Credit Score Hooks
+export function useCreditScore() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['credit-score'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<CreditScoreResponse>('/credit/score', token)
+    },
+  })
+}
+
+export function useCreditScoreHistory(limit: number = 12) {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['credit-score-history', limit],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<{ history: CreditScoreHistoryItem[] }>(`/credit/score/history?limit=${limit}`, token)
+    },
+  })
+}
+
+export function useSimulatorAccess() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['simulator-access'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<SimulatorAccess>('/credit/simulator/access', token)
+    },
+  })
+}
+
+export function useSimulateScenario() {
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async ({ scenario, details }: { scenario: string; details?: Record<string, unknown> }) => {
+      const token = await getToken()
+      return api.post<SimulationResult>('/credit/simulator/scenario', { scenario, details }, token)
+    },
+  })
+}
+
+export function useAISimulation() {
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async ({ question, context }: { question: string; context?: Record<string, unknown> }) => {
+      const token = await getToken()
+      return api.post<AISimulationResponse>('/credit/simulator/ai', { question, context }, token)
+    },
+  })
+}
+
+export function useSubscribeToSimulator() {
+  const queryClient = useQueryClient()
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (planType: 'monthly' | 'annual') => {
+      const token = await getToken()
+      return api.post<{
+        message: string
+        subscription_id: number
+        plan: string
+        amount: number
+        status: string
+        payment_url: string
+      }>('/credit/simulator/subscribe', { plan_type: planType }, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['simulator-access'] })
+    },
+  })
+}
+
+export function useCreditTips() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['credit-tips'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<CreditTipsResponse>('/credit/tips', token)
+    },
+  })
+}
+
+// Education Types
+export interface EducationContent {
+  id: string
+  title: string
+  description: string
+  category: string
+  type: 'article' | 'video' | 'tutorial'
+  duration?: string
+  thumbnail?: string
+  tags: string[]
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  is_premium: boolean
+}
+
+export interface EducationContentDetail extends EducationContent {
+  content?: string
+  content_url?: string
+}
+
+export interface EducationCategory {
+  id: string
+  name: string
+  description: string
+  icon: string
+  content_count: number
+}
+
+// Education Hooks
+export function useEducationContent(filters?: {
+  category?: string
+  type?: string
+  difficulty?: string
+  search?: string
+}) {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['education-content', filters],
+    queryFn: async () => {
+      const token = await getToken()
+      const params = new URLSearchParams()
+      if (filters?.category) params.append('category', filters.category)
+      if (filters?.type) params.append('type', filters.type)
+      if (filters?.difficulty) params.append('difficulty', filters.difficulty)
+      if (filters?.search) params.append('search', filters.search)
+
+      const queryString = params.toString()
+      return api.get<{ content: EducationContent[]; total: number }>(
+        `/education/content${queryString ? `?${queryString}` : ''}`,
+        token
+      )
+    },
+  })
+}
+
+export function useEducationContentDetail(contentId: string) {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['education-content-detail', contentId],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<EducationContentDetail>(`/education/content/${contentId}`, token)
+    },
+    enabled: !!contentId,
+  })
+}
+
+export function useEducationCategories() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['education-categories'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<{ categories: EducationCategory[] }>('/education/categories', token)
+    },
+  })
+}
+
+export function useRecommendedContent() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['recommended-content'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<{
+        recommended: Array<EducationContent & { reason: string }>
+      }>('/education/recommended', token)
+    },
+  })
+}
+
+// ==================== External Credit Types ====================
+
+export interface ExternalCreditAccount {
+  id: number
+  account_type: string
+  provider_name: string
+  credit_limit: number | null
+  current_balance: number
+  interest_rate: number
+  minimum_payment: number
+  is_active: boolean
+  payment_status: string
+  created_at: string
+}
+
+export interface CreditItem {
+  type: string
+  provider: string
+  amount: number
+  interest_rate: number
+  term_months: number
+}
+
+export interface CreditScenario {
+  id: number
+  name: string
+  description: string | null
+  credit_items: CreditItem[]
+  projected_total_debt: number | null
+  projected_monthly_payment: number | null
+  projected_dti: number | null
+  projected_total_interest: number | null
+  risk_level: string | null
+  created_at: string
+}
+
+export interface CreditPortfolio {
+  depco_loans: Array<{
+    id: number
+    purpose: string
+    amount: number
+    monthly_payment: number
+    interest_rate: number
+    term_months: number
+    status: string
+    paid_months?: number
+    start_date?: string
+  }>
+  depco_total_balance: number
+  depco_monthly_payment: number
+  external_accounts: Array<{
+    id: number
+    type: string
+    provider: string
+    balance: number
+    limit: number | null
+    monthly_payment: number
+    interest_rate: number
+    status: string
+  }>
+  external_total_balance: number
+  external_monthly_payment: number
+  total_credit_used: number
+  total_monthly_payments: number
+  monthly_income: number
+  dti_ratio: number
+  dti_status: 'safe' | 'caution' | 'risky'
+  credit_score: number | null
+  credit_rating: string | null
+}
+
+export interface MultiScenarioSimulationResult {
+  current_total_debt: number
+  current_monthly_payments: number
+  current_dti: number
+  projected_total_debt: number
+  projected_monthly_payments: number
+  projected_dti: number
+  debt_increase: number
+  payment_increase: number
+  dti_increase: number
+  new_credit_items: Array<{
+    type: string
+    provider: string
+    amount: number
+    interest_rate: number
+    term_months: number
+    monthly_payment: number
+    total_interest: number
+    total_repayment: number
+  }>
+  total_new_credit: number
+  total_new_interest: number
+  total_new_monthly_payment: number
+  risk_level: 'low' | 'moderate' | 'high' | 'very_high'
+  affordability_status: string
+  recommendation: string
+  remaining_monthly: number
+}
+
+export interface ScenarioComparison {
+  current: {
+    name: string
+    total_debt: number
+    monthly_payments: number
+    dti: number
+    risk_level: string
+    remaining_monthly: number
+  }
+  scenarios: Array<{
+    id: number
+    name: string
+    total_debt: number
+    monthly_payments: number
+    new_credit: number
+    new_interest: number
+    dti: number
+    risk_level: string
+    remaining_monthly: number
+    credit_items: CreditItem[]
+  }>
+  monthly_income: number
+  recommendation: {
+    best_scenario_id: number
+    best_scenario_name: string
+    reason: string
+  }
+}
+
+// ==================== External Credit Hooks ====================
+
+export function useExternalAccounts() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['external-accounts'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<ExternalCreditAccount[]>('/credit/external', token)
+    },
+  })
+}
+
+export function useAddExternalAccount() {
+  const queryClient = useQueryClient()
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (data: {
+      account_type: string
+      provider_name: string
+      credit_limit?: number
+      current_balance: number
+      interest_rate: number
+      minimum_payment: number
+      payment_status?: string
+    }) => {
+      const token = await getToken()
+      return api.post<ExternalCreditAccount>('/credit/external', data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['external-accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['credit-portfolio'] })
+    },
+  })
+}
+
+export function useUpdateExternalAccount() {
+  const queryClient = useQueryClient()
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async ({ id, data }: {
+      id: number
+      data: Partial<{
+        provider_name: string
+        credit_limit: number
+        current_balance: number
+        interest_rate: number
+        minimum_payment: number
+        payment_status: string
+        is_active: boolean
+      }>
+    }) => {
+      const token = await getToken()
+      return api.put<ExternalCreditAccount>(`/credit/external/${id}`, data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['external-accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['credit-portfolio'] })
+    },
+  })
+}
+
+export function useDeleteExternalAccount() {
+  const queryClient = useQueryClient()
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const token = await getToken()
+      return api.delete<{ message: string }>(`/credit/external/${id}`, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['external-accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['credit-portfolio'] })
+    },
+  })
+}
+
+// ==================== Portfolio Hook ====================
+
+export function useCreditPortfolio() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['credit-portfolio'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<CreditPortfolio>('/credit/portfolio', token)
+    },
+  })
+}
+
+// ==================== Multi-Scenario Simulation Hooks ====================
+
+export function useMultiScenarioSimulation() {
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (creditItems: CreditItem[]) => {
+      const token = await getToken()
+      return api.post<MultiScenarioSimulationResult>('/credit/simulate', { credit_items: creditItems }, token)
+    },
+  })
+}
+
+export function useCreditScenarios() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['credit-scenarios'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<CreditScenario[]>('/credit/scenarios', token)
+    },
+  })
+}
+
+export function useSaveScenario() {
+  const queryClient = useQueryClient()
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (data: {
+      name: string
+      description?: string
+      credit_items: CreditItem[]
+    }) => {
+      const token = await getToken()
+      return api.post<CreditScenario>('/credit/scenarios', data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-scenarios'] })
+    },
+  })
+}
+
+export function useUpdateScenario() {
+  const queryClient = useQueryClient()
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (data: {
+      id: number
+      name: string
+      description?: string
+      credit_items: CreditItem[]
+    }) => {
+      const token = await getToken()
+      const { id, ...rest } = data
+      return api.put<CreditScenario>(`/credit/scenarios/${id}`, rest, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-scenarios'] })
+    },
+  })
+}
+
+export function useDeleteScenario() {
+  const queryClient = useQueryClient()
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const token = await getToken()
+      return api.delete<{ message: string }>(`/credit/scenarios/${id}`, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-scenarios'] })
+    },
+  })
+}
+
+export function useSeedScenarios() {
+  const queryClient = useQueryClient()
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = await getToken()
+      return api.post<{ message: string; scenarios: string[] }>('/credit/scenarios/seed', {}, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-scenarios'] })
+    },
+  })
+}
+
+export function useCompareScenarios() {
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (scenarioIds: number[]) => {
+      const token = await getToken()
+      return api.post<ScenarioComparison>('/credit/scenarios/compare', { scenario_ids: scenarioIds }, token)
+    },
+  })
+}
+
+// ==================== Imported Credit Score ====================
+
+export interface ScoreImpactFactor {
+  factor: string
+  impact: number
+  description: string
+}
+
+export interface ProjectedScoreImpact {
+  current_score: number
+  projected_score: number
+  total_impact: number
+  factors: ScoreImpactFactor[]
+  confidence: string
+  note: string
+}
+
+export interface ImportedCreditScore {
+  id: number
+  score: number
+  score_band: string | null
+  bureau: string
+  min_score: number
+  max_score: number
+  normalized_score: number
+  report_date: string | null
+  notes: string | null
+  projected_impact: ProjectedScoreImpact
+  created_at: string
+  updated_at: string
+}
+
+export interface ImportScoreInput {
+  score: number
+  bureau?: string
+  score_band?: string
+  min_score?: number
+  max_score?: number
+  report_date?: string
+  notes?: string
+}
+
+export interface ScoreImpactSimulation extends ProjectedScoreImpact {
+  credit_items: {
+    type: string
+    provider: string
+    amount: number
+    individual_impact: number
+  }[]
+}
+
+export function useImportedScore() {
+  const getToken = useApiToken()
+
+  return useQuery({
+    queryKey: ['imported-score'],
+    queryFn: async () => {
+      const token = await getToken()
+      return api.get<ImportedCreditScore | null>('/credit/imported-score', token)
+    },
+  })
+}
+
+export function useImportScore() {
+  const getToken = useApiToken()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: ImportScoreInput) => {
+      const token = await getToken()
+      return api.post<ImportedCreditScore>('/credit/imported-score', data as unknown as Record<string, unknown>, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['imported-score'] })
+      queryClient.invalidateQueries({ queryKey: ['credit-portfolio'] })
+    },
+  })
+}
+
+export function useDeleteImportedScore() {
+  const getToken = useApiToken()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = await getToken()
+      return api.delete<{ message: string }>('/credit/imported-score', token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['imported-score'] })
+    },
+  })
+}
+
+export function useSimulateScoreImpact() {
+  const getToken = useApiToken()
+
+  return useMutation({
+    mutationFn: async (creditItems: CreditItem[]) => {
+      const token = await getToken()
+      return api.post<ScoreImpactSimulation>('/credit/simulate-score-impact', { credit_items: creditItems }, token)
     },
   })
 }

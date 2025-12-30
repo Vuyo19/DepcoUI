@@ -27,6 +27,8 @@ export function useInitiateBankVerification() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bank-verification'] })
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['kyc-status'] })
     },
   })
 }
@@ -49,6 +51,8 @@ export function useVerifyBankAccount() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bank-verification'] })
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['kyc-status'] })
     },
   })
 }

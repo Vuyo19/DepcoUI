@@ -82,12 +82,19 @@ export function ApplyPage() {
     watchedValues.term || 12
   )
 
-  // Redirect to profile onboarding if KYC not completed
+  // Check if user has completed the required onboarding steps
+  const hasCompletedOnboarding = userProfile && (
+    (userProfile.profile_completed || (userProfile.phone_number && userProfile.id_number)) &&
+    userProfile.expenses_completed &&
+    userProfile.bank_verified
+  )
+
+  // Redirect to profile onboarding if required steps not completed
   useEffect(() => {
-    if (kycStatus && !kycStatus.kyc_completed) {
+    if (userProfile && !hasCompletedOnboarding) {
       navigate('/onboarding/profile', { state: { from: '/apply' } })
     }
-  }, [kycStatus, navigate])
+  }, [userProfile, hasCompletedOnboarding, navigate])
 
   // Run quick assessment when KYC is complete
   useEffect(() => {
@@ -104,8 +111,8 @@ export function ApplyPage() {
   }, [kycStatus?.kyc_completed])
 
   const nextStep = async () => {
-    // Check KYC before proceeding
-    if (!kycStatus?.kyc_completed) {
+    // Check onboarding before proceeding
+    if (!hasCompletedOnboarding) {
       navigate('/onboarding/profile', { state: { from: '/apply' } })
       return
     }
@@ -142,8 +149,8 @@ export function ApplyPage() {
   }
 
   const onSubmit = async (data: ApplicationFormData) => {
-    // Final KYC check before submission
-    if (!kycStatus?.kyc_completed) {
+    // Final onboarding check before submission
+    if (!hasCompletedOnboarding) {
       navigate('/onboarding/profile', { state: { from: '/apply' } })
       return
     }
@@ -190,8 +197,8 @@ export function ApplyPage() {
   return (
     <div className="min-h-screen bg-neutral-50 py-8">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        {/* KYC Required Banner */}
-        {!kycStatus?.kyc_completed && (
+        {/* Onboarding Required Banner */}
+        {!hasCompletedOnboarding && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-600" />
@@ -265,13 +272,13 @@ export function ApplyPage() {
         <div className="mb-6 rounded-xl border border-neutral-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-medium text-neutral-700">Application Requirements</h3>
           <div className="grid grid-cols-3 gap-3">
-            <div className={`flex items-center gap-2 rounded-lg p-2 ${kycStatus?.kyc_completed ? 'bg-green-50' : 'bg-neutral-50'}`}>
-              {kycStatus?.kyc_completed ? (
+            <div className={`flex items-center gap-2 rounded-lg p-2 ${(userProfile?.phone_number && userProfile?.id_number) ? 'bg-green-50' : 'bg-neutral-50'}`}>
+              {(userProfile?.phone_number && userProfile?.id_number) ? (
                 <CheckCircle className="h-4 w-4 text-green-600" />
               ) : (
                 <div className="h-4 w-4 rounded-full border-2 border-neutral-300" />
               )}
-              <span className={`text-sm ${kycStatus?.kyc_completed ? 'text-green-700 font-medium' : 'text-neutral-500'}`}>
+              <span className={`text-sm ${(userProfile?.phone_number && userProfile?.id_number) ? 'text-green-700 font-medium' : 'text-neutral-500'}`}>
                 Profile
               </span>
             </div>
@@ -632,7 +639,7 @@ export function ApplyPage() {
                       </div>
                     </div>
 
-                    {kycStatus?.kyc_completed && (
+                    {hasCompletedOnboarding && (
                       <div className="rounded-xl border border-green-200 bg-green-50 p-4">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="h-5 w-5 text-green-600" />
@@ -641,7 +648,7 @@ export function ApplyPage() {
                           </span>
                         </div>
                         <p className="mt-1 text-sm text-green-700">
-                          Your KYC information has been submitted and verified.
+                          Your profile information has been verified.
                         </p>
                       </div>
                     )}
@@ -690,7 +697,7 @@ export function ApplyPage() {
                     type="submit"
                     className="flex-1"
                     isLoading={applyForLoan.isPending}
-                    disabled={!kycStatus?.kyc_completed || !userProfile?.expenses_completed || !documentStatus?.all_uploaded}
+                    disabled={!hasCompletedOnboarding || !documentStatus?.all_uploaded}
                   >
                     Submit Application
                   </Button>

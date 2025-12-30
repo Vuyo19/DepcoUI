@@ -466,8 +466,8 @@ export function HomePage() {
             <Link to={isSignedIn ? '/apply' : '/register'}>
               <Button
                 size="lg"
-                className="bg-white text-primary-600 hover:bg-primary-50"
-                rightIcon={<ArrowRight className="h-5 w-5" />}
+                className="!bg-white !text-primary-600 hover:!bg-primary-50"
+                rightIcon={<ArrowRight className="h-5 w-5 text-primary-600" />}
               >
                 {isSignedIn ? 'Start Application' : 'Create Free Account'}
               </Button>
